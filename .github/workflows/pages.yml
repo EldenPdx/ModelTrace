@@ -24,6 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Configure Pages
+        if: github.event_name == 'workflow_dispatch' || vars.MODELTRACE_DEPLOY_PAGES == 'true'
         uses: actions/configure-pages@v5
       - name: Assemble manual-only site
         run: |
@@ -31,9 +32,11 @@ jobs:
           cp static/index.html static/styles.css static/repository-link.css static/pages-app.js static/fingerprint-core.js static/challenge-browser.js static/.nojekyll _site/
           cp data/unified_bank.json _site/data/unified_bank.json
       - name: Upload static site
+        if: github.event_name == 'workflow_dispatch' || vars.MODELTRACE_DEPLOY_PAGES == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
       - name: Deploy
+        if: github.event_name == 'workflow_dispatch' || vars.MODELTRACE_DEPLOY_PAGES == 'true'
         id: deployment
         uses: actions/deploy-pages@v4

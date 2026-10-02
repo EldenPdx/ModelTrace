@@ -13,7 +13,9 @@ python start.py
 
 ## GitHub Pages
 
-`static/index.html` 是不依赖后端的手动测试版本，归因计算和指纹库读取都在浏览器本地完成。仓库附带的 GitHub Actions 会将 `static/` 部署到 GitHub Pages。
+`static/index.html` 是不依赖后端的手动测试版本，归因计算和指纹库读取都在浏览器本地完成。GitHub Actions 默认验证静态站点构建。需要部署时，先在仓库 Settings → Pages 中选择 GitHub Actions，再设置仓库 Actions 变量 `MODELTRACE_DEPLOY_PAGES=true` 开启推送后自动部署，或手动运行 Pages 工作流。
+
+外部 API 自动测试由 Python 后端提供，调用方式见 [API 接入文档](docs/api-testing.md)。
 
 ## 使用
 
