@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -433,7 +433,9 @@ test('modified bundled assets fail integrity checks instead of silently scoring'
   const copy = path.join(dir, 'modified-plugin');
   await cp(ROOT, copy, { recursive: true });
   await writeFile(path.join(copy, 'assets', 'unified_bank.json'), '{}');
-  const result = spawnSync(process.execPath, [path.join(copy, 'scripts', 'guard.mjs'), 'doctor'], { encoding: 'utf8', timeout: 10000 });
+  const linked = path.join(dir, 'linked-plugin');
+  await symlink(copy, linked, 'junction');
+  const result = spawnSync(process.execPath, [path.join(linked, 'scripts', 'guard.mjs'), 'doctor'], { encoding: 'utf8', timeout: 10000 });
   assert.equal(result.status, 1);
   assert.match(JSON.parse(result.stderr).error, /checksum mismatch/);
 });
