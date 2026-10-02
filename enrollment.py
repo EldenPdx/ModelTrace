@@ -254,8 +254,11 @@ def _request_completion(
                 payload = json.loads(response.read().decode("utf-8"))
             break
         except urllib.error.HTTPError as error:
-            details = error.read().decode("utf-8", errors="replace").strip()
+            with error:
+                details = error.read().decode("utf-8", errors="replace").strip()
             message = _compact_upstream_error(details, error.reason)
+            if api_key:
+                message = message.replace(api_key, "[REDACTED]")
             retried = f"（已自动重试 {attempt - 1} 次）" if attempt > 1 else ""
             if attempt < MAX_ATTEMPTS and error.code in RETRYABLE_STATUS:
                 time.sleep(RETRY_BASE_DELAY * attempt + random.uniform(0, 0.5))

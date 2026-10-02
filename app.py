@@ -5,6 +5,7 @@ import math
 import re
 import secrets
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from flask import Flask, jsonify, render_template, request
 
@@ -181,6 +182,52 @@ def analyze():
         return jsonify(result)
     except ValueError as error:
         return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v1/test")
+def external_automatic_test():
+    payload = request.get_json(silent=True)
+    try:
+        if not isinstance(payload, dict):
+            raise ValueError("请求体必须是 JSON 对象")
+        base_url = payload.get("baseurl", payload.get("base_url"))
+        for name, value in (
+            ("baseurl", base_url),
+            ("api_model", payload.get("api_model")),
+            ("api_key", payload.get("api_key")),
+        ):
+            if not isinstance(value, str) or not value.strip() or any(ord(char) < 32 or ord(char) == 127 for char in value):
+                raise ValueError(f"{name} 必须是非空且不含控制字符的字符串")
+        url = urlsplit(base_url.strip())
+        if (
+            url.scheme not in {"http", "https"} or not url.hostname
+            or url.username is not None or url.password is not None
+            or url.query or url.fragment
+            or any(char.isspace() for char in base_url.strip())
+        ):
+            raise ValueError("baseurl 必须是有效的 HTTP(S) API 地址，不含凭据、查询参数或片段")
+        # Accessing port also validates malformed and out-of-range ports.
+        url.port
+        value = payload.get("temperature")
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 2):
+            raise ValueError("temperature 必须为 0 到 2 之间的有限数字或 null")
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
+    if not unified_bank or not unified_bank.get("models"):
+        return jsonify({"error": "指纹库不可用"}), 503
+    try:
+        result = test_automatic(
+            base_url=base_url.strip(),
+            api_key=payload["api_key"],
+            api_model=payload["api_model"].strip(),
+            temperature=payload.get("temperature"),
+            bank=unified_bank,
+            api_format="auto",
+        )
+    except (ValueError, RuntimeError):
+        return jsonify({"error": "未获得可用于归因的回答，请检查上游地址、模型名、API Key 或模型输出"}), 502
+    result["bank"] = summarized_unified_bank()
+    return jsonify({"model_name": result["prediction_name"], "addtional_data": result})
 
 
 @app.post("/api/test/auto")
